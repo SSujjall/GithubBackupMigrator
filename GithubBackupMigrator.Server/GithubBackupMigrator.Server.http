@@ -1,0 +1,6 @@
+@GithubBackupMigrator.Server_HostAddress = http://localhost:5208
+
+GET {{GithubBackupMigrator.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
