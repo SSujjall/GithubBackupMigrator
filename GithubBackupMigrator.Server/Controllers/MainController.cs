@@ -14,8 +14,8 @@ namespace GithubBackupMigrator.Server.Controllers
         [HttpPost]
         public async Task<IActionResult> StartBackup([FromBody] BackupRequest reqModel)
         {
-            //string jobId = Guid.NewGuid().ToString();
-            string jobId = "12345";
+            string jobId = Guid.NewGuid().ToString();
+            //string jobId = "12345";
 
 
             _ = Task.Run(() => _backupService.StartBackupService(jobId, reqModel));

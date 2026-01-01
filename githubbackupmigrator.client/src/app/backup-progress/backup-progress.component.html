@@ -1,29 +1,51 @@
-<div class="backup-form">
-  <h2>GitHub Backup</h2>
-  <input placeholder="Source GitHub Username" [(ngModel)]="sourceUser" />
-  <input placeholder="Source GitHub Token" [(ngModel)]="sourceToken" type="password" />
-  <input placeholder="Target GitHub Username" [(ngModel)]="targetUser" />
-  <input placeholder="Target GitHub Token" [(ngModel)]="targetToken" type="password" />
+<div class="backup-container">
+  <div class="backup-form">
+    <h2>GitHub Backup</h2>
+    <input placeholder="Source GitHub Username" [(ngModel)]="sourceUser" />
+    <input placeholder="Source GitHub Token" [(ngModel)]="sourceToken" type="password" />
+    <input placeholder="Target GitHub Username" [(ngModel)]="targetUser" />
+    <input placeholder="Target GitHub Token" [(ngModel)]="targetToken" type="password" />
 
-  <button (click)="startBackup()">Start Backup</button>
-</div>
-
-<div *ngIf="statusMessage">Status: {{statusMessage}}</div>
-
-<div *ngIf="progressList.length > 0">
-  <h3>Progress</h3>
-  <div *ngFor="let progress of progressList">
-    <div>{{progress.repo}} - {{progress.status}} - {{progress.message}}</div>
-    <progress [value]="progress.current" [max]="progress.total"></progress>
+    <button (click)="startBackup()">Start Backup</button>
   </div>
-</div>
 
-<div *ngIf="summary">
-  <h3>Summary</h3>
-  <div>Total: {{summary.total}}, Success: {{summary.success}}, Failed: {{summary.failed}}, Skipped: {{summary.skipped}}</div>
-  <div>Progress: {{summary.percentage}}%</div>
-  <progress [value]="summary.current" [max]="summary.total"></progress>
-</div>
+  <!-- Single Progress Bar -->
+  <div *ngIf="summary.total > 0" class="progress-section">
+    <h3>Overall Progress</h3>
+    <div class="progress-wrapper">
+      <div class="progress-bar" [style.width.%]="summary.percentage"></div>
+    </div>
+    <div class="progress-text">
+      {{summary.current}} / {{summary.total}} ({{summary.percentage}}%)
+    </div>
+    <div *ngIf="summary.timestamp" class="timestamp">
+      Last updated: {{summary.timestamp | date:'medium'}}
+    </div>
 
-<div *ngIf="finishedMessage" style="color:green">Finished: {{finishedMessage}}</div>
-<div *ngIf="errorMessage" style="color:red">Error: {{errorMessage}}</div>
+    <!-- Summary details -->
+    <div class="summary-details">
+      <span class="success">✔ Success: {{summary.success}}</span>
+      <span class="failed">✖ Failed: {{summary.failed}}</span>
+      <span class="skipped">⏭ Skipped: {{summary.skipped}}</span>
+    </div>
+  </div>
+
+  <!-- Scrollable Completed Tasks Box -->
+  <div *ngIf="completedTasks.length > 0" class="completed-tasks">
+    <h4>Completed Tasks</h4>
+    <div *ngFor="let progress of completedTasks" class="task-card">
+      <div>
+        <strong>{{progress.repo}}</strong> - {{progress.status}}
+        <span *ngIf="progress.message">- {{progress.message}}</span>
+      </div>
+      <div *ngIf="progress.timestamp" class="task-time">
+        {{progress.timestamp | date:'short'}}
+      </div>
+    </div>
+  </div>
+
+  <!-- Status, finished, error messages -->
+  <div *ngIf="statusMessage" class="status-msg">Status: {{statusMessage}}</div>
+  <div *ngIf="finishedMessage" class="finished-msg">{{finishedMessage}}</div>
+  <div *ngIf="errorMessage" class="error-msg">{{errorMessage}}</div>
+</div>
