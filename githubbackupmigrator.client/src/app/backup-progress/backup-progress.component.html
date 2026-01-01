@@ -1,0 +1,29 @@
+<div class="backup-form">
+  <h2>GitHub Backup</h2>
+  <input placeholder="Source GitHub Username" [(ngModel)]="sourceUser" />
+  <input placeholder="Source GitHub Token" [(ngModel)]="sourceToken" type="password" />
+  <input placeholder="Target GitHub Username" [(ngModel)]="targetUser" />
+  <input placeholder="Target GitHub Token" [(ngModel)]="targetToken" type="password" />
+
+  <button (click)="startBackup()">Start Backup</button>
+</div>
+
+<div *ngIf="statusMessage">Status: {{statusMessage}}</div>
+
+<div *ngIf="progressList.length > 0">
+  <h3>Progress</h3>
+  <div *ngFor="let progress of progressList">
+    <div>{{progress.repo}} - {{progress.status}} - {{progress.message}}</div>
+    <progress [value]="progress.current" [max]="progress.total"></progress>
+  </div>
+</div>
+
+<div *ngIf="summary">
+  <h3>Summary</h3>
+  <div>Total: {{summary.total}}, Success: {{summary.success}}, Failed: {{summary.failed}}, Skipped: {{summary.skipped}}</div>
+  <div>Progress: {{summary.percentage}}%</div>
+  <progress [value]="summary.current" [max]="summary.total"></progress>
+</div>
+
+<div *ngIf="finishedMessage" style="color:green">Finished: {{finishedMessage}}</div>
+<div *ngIf="errorMessage" style="color:red">Error: {{errorMessage}}</div>

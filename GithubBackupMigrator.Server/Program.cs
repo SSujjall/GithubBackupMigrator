@@ -15,9 +15,25 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IBackupService, BackupService>();
 #endregion
 
+#region CORS Policy
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll",
+        policy =>
+        {
+            policy.AllowAnyOrigin()
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        });
+});
+#endregion
+
 builder.Services.AddSignalR();
 
 var app = builder.Build();
+
+// Use CORS policy
+app.UseCors("AllowAll");
 
 app.UseDefaultFiles();
 app.UseStaticFiles();

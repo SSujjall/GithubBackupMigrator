@@ -20,7 +20,7 @@ namespace GithubBackupMigrator.Server.Controllers
 
             _ = Task.Run(() => _backupService.StartBackupService(jobId, reqModel));
 
-            return Ok(ApiResponse<string>.SuccessResponse(jobId, "Backup started. Connect to SignalR hub with this jobId to track progress."));
+            return Ok(ApiResponse<object>.SuccessResponse(new { jobId = jobId }, "Backup started. Connect to SignalR hub with this jobId to track progress."));
         }
     }
 }

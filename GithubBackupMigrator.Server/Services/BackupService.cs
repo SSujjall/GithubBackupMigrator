@@ -15,12 +15,22 @@ namespace GithubBackupMigrator.Server.Services
     public class BackupService : IBackupService
     {
         private readonly IHubContext<SignalRHub> _hub;
-        private readonly string workDir = @"C:\repo-backups";
-        static readonly string logFile = @"C:\repo-backups\repo-backup-log.txt";
+        //private readonly string workDir = @"C:\repo-backups";
+        //static readonly string logFile = @"C:\repo-backups\repo-backup-log.txt";
+
+        private readonly string workDir;
+        private readonly string logFile;
 
         public BackupService(IHubContext<SignalRHub> hub)
         {
             _hub = hub;
+
+            // Base folder of your backend project
+            string baseDir = AppContext.BaseDirectory;
+
+            // Backup folder inside project folder
+            workDir = Path.Combine(baseDir, "Backups");
+            logFile = Path.Combine(baseDir, "Backups", "repo-backup-log.txt");
         }
 
         public async Task StartBackupService(string jobId, BackupRequest model)
