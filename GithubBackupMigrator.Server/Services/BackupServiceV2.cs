@@ -1,25 +1,19 @@
 ﻿using GithubBackupMigrator.Server.Models;
 using GithubBackupMigrator.Server.Services.Helpers;
+using LibGit2Sharp;
 
 namespace GithubBackupMigrator.Server.Services
 {
-    public interface IBackupService
-    {
-        Task StartBackupService(string jobId, BackupRequest model);
-    }
-
-    public class BackupService : IBackupService
+    public class BackupServiceV2 : IBackupService
     {
         private readonly SignalRHelper _srh;
         private readonly LogHelper _logH;
         private readonly GithubCommandHelper _gch;
 
-        //private readonly string workDir = @"C:\repo-backups";
-        //static readonly string logFile = @"C:\repo-backups\repo-backup-log.txt";
-
         private readonly string workDir;
+        private readonly string logFile;
 
-        public BackupService(SignalRHelper srh, LogHelper logH, GithubCommandHelper gch)
+        public BackupServiceV2(SignalRHelper srh, LogHelper logH, GithubCommandHelper gch)
         {
             _srh = srh;
             _logH = logH;
@@ -29,8 +23,10 @@ namespace GithubBackupMigrator.Server.Services
             string baseDir = AppContext.BaseDirectory;
 
             // Backup folder inside project folder
-            workDir = Path.Combine(baseDir, "Backups");
+            workDir = Path.Combine(baseDir, "Backups2");
+            logFile = Path.Combine(baseDir, "Backups2", "repo-backup2-log.txt");
         }
+
 
         public async Task StartBackupService(string jobId, BackupRequest model)
         {
@@ -65,7 +61,6 @@ namespace GithubBackupMigrator.Server.Services
                     current++;
 
                     string repoDir = Path.Combine(workDir, repo);
-
                     string sourceUrl = string.IsNullOrEmpty(model.SourceGithubToken)
                         ? $"https://github.com/{model.SourceGithubUser}/{repo}.git"
                         : $"https://{model.SourceGithubToken}@github.com/{model.SourceGithubUser}/{repo}.git";
@@ -86,7 +81,6 @@ namespace GithubBackupMigrator.Server.Services
 
                             if (sourceLatestCommit == targetLatestCommit)
                             {
-                                //Console.WriteLine($"{repo} is already up to date. Skipping...");
                                 _logH.Log($"SKIPPED: {repo} - Already up to date");
                                 skipped++;
                                 await _srh.SendProgress(jobId, repo, current, total, "Skipped", "Already up to date");
@@ -95,7 +89,6 @@ namespace GithubBackupMigrator.Server.Services
                             }
                             else
                             {
-                                //Console.WriteLine($"\n{repo} has updates. Syncing...");
                                 _logH.Log($"UPDATING: {repo} - Source: {sourceLatestCommit?.Substring(0, 7)}, Target: {targetLatestCommit?.Substring(0, 7)}");
                             }
                         }
@@ -104,18 +97,25 @@ namespace GithubBackupMigrator.Server.Services
                             _logH.Log($"NEW REPO: {repo}");
                         }
 
-                        // Clone or update local mirror
-                        if (Directory.Exists(repoDir))
+                        // Clone or update local mirror using LibGit2Sharp
+                        if (Directory.Exists(repoDir) && Repository.IsValid(repoDir))
                         {
                             await _srh.SendProgress(jobId, repo, current, total, "Updating", "Updating local mirror...");
                             _logH.Log($"DEBUG: Updating local mirror for '{repo}'");
-                            _gch.RunGitCommand("remote update --prune", repoDir);
+                            await Task.Run(() => UpdateMirrorRepository(repoDir, model.SourceGithubToken));
                         }
                         else
                         {
                             await _srh.SendProgress(jobId, repo, current, total, "Cloning", "Cloning from source...");
                             _logH.Log($"DEBUG: Cloning repository '{repo}' from source");
-                            _gch.RunGitCommand($"clone --mirror {sourceUrl} \"{repoDir}\"");
+
+                            // Clean up directory if it exists but is not a valid repo
+                            if (Directory.Exists(repoDir))
+                            {
+                                Directory.Delete(repoDir, true);
+                            }
+
+                            await Task.Run(() => CloneMirrorRepository(sourceUrl, repoDir, model.SourceGithubToken));
                         }
 
                         if (!repoExistsInTarget)
@@ -125,20 +125,9 @@ namespace GithubBackupMigrator.Server.Services
                             await _gch.CreateTargetGithubRepo(repo, model.TargetGithubToken);
                         }
 
-                        // Set up target remote if not already set
-                        try
-                        {
-                            _gch.RunGitCommand("remote get-url target", repoDir);
-                        }
-                        catch
-                        {
-                            _logH.Log($"DEBUG: Adding target remote for '{repo}'");
-                            _gch.RunGitCommand($"remote add target {targetUrl}", repoDir);
-                        }
-
                         await _srh.SendProgress(jobId, repo, current, total, "Pushing", "Pushing to target...");
                         _logH.Log($"DEBUG: Pushing '{repo}' to target repository");
-                        _gch.RunGitCommand("push target --mirror", repoDir);
+                        await Task.Run(() => PushToTarget(repoDir, targetUrl, model.TargetGithubToken));
 
                         await _srh.SendProgress(jobId, repo, current, total, "Completed");
                         _logH.Log($"SUCCESS: {repo}");
@@ -164,6 +153,98 @@ namespace GithubBackupMigrator.Server.Services
                 _logH.Log($"CRITICAL ERROR: {ex.Message}\nStack Trace: {ex.StackTrace}");
                 await _srh.SendFinishUpdate(isError: true, ex: ex);
             }
-        }        
+        }
+
+
+        private void CloneMirrorRepository(string sourceUrl, string repoDir, string token)
+        {
+            var cloneOptions = new CloneOptions
+            {
+                IsBare = true // Mirror clone is a bare repository
+            };
+            cloneOptions.FetchOptions.CredentialsProvider = (_url, _user, _cred) =>
+                new UsernamePasswordCredentials
+                {
+                    Username = token,
+                    Password = string.Empty
+                };
+
+            Repository.Clone(sourceUrl, repoDir, cloneOptions);
+        }
+
+        private void UpdateMirrorRepository(string repoDir, string token)
+        {
+            using (var repo = new Repository(repoDir))
+            {
+                var fetchOptions = new FetchOptions
+                {
+                    Prune = true
+                };
+                fetchOptions.CredentialsProvider = (_url, _user, _cred) =>
+                    new UsernamePasswordCredentials
+                    {
+                        Username = token,
+                        Password = string.Empty
+                    };
+
+                // Fetch from all remotes
+                foreach (var remote in repo.Network.Remotes)
+                {
+                    var refSpecs = remote.FetchRefSpecs.Select(x => x.Specification);
+                    Commands.Fetch(repo, remote.Name, refSpecs, fetchOptions, string.Empty);
+                }
+            }
+        }
+
+        private void PushToTarget(string repoDir, string targetUrl, string token)
+        {
+            using (var repo = new Repository(repoDir))
+            {
+                // Check if target remote exists, add it if not
+                var targetRemote = repo.Network.Remotes["target"];
+                if (targetRemote == null)
+                {
+                    repo.Network.Remotes.Add("target", targetUrl);
+                    targetRemote = repo.Network.Remotes["target"];
+                }
+                else if (targetRemote.Url != targetUrl)
+                {
+                    // Update remote URL if it changed
+                    repo.Network.Remotes.Update("target", r => r.Url = targetUrl);
+                    targetRemote = repo.Network.Remotes["target"];
+                }
+
+                var pushOptions = new PushOptions();
+                pushOptions.CredentialsProvider = (_url, _user, _cred) =>
+                    new UsernamePasswordCredentials
+                    {
+                        Username = token,
+                        Password = string.Empty
+                    };
+
+                // Push all refs (mirror push)
+                var pushRefSpecs = new List<string>();
+
+                // Push all branches
+                foreach (var branch in repo.Branches)
+                {
+                    pushRefSpecs.Add($"+{branch.CanonicalName}:{branch.CanonicalName}");
+                }
+
+                // Push all tags
+                foreach (var tag in repo.Tags)
+                {
+                    pushRefSpecs.Add($"+{tag.CanonicalName}:{tag.CanonicalName}");
+                }
+
+                if (pushRefSpecs.Any())
+                {
+                    repo.Network.Push(targetRemote, pushRefSpecs, pushOptions);
+                }
+
+                // Note: Complete mirror behavior would require deleting refs on target
+                // that don't exist in source, which requires additional logic
+            }
+        }
     }
 }

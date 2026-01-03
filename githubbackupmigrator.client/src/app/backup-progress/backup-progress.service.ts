@@ -31,7 +31,8 @@ export interface BackupSummary {
   providedIn: 'root'
 })
 export class BackupProgressService {
-  private apiUrl = 'https://localhost:7278/api/Main';
+  //private apiUrl = 'https://localhost:7278/api/Main/v1';
+  private apiUrl = 'https://localhost:7278/api/Main/v2';
 
   constructor(private http: HttpClient) { }
 

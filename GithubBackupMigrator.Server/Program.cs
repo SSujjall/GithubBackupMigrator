@@ -2,6 +2,7 @@ using GithubBackupMigrator.Server.Hubs;
 using GithubBackupMigrator.Server.Models;
 using GithubBackupMigrator.Server.Services;
 using GithubBackupMigrator.Server.Services.Helpers;
+using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,7 +14,9 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 #region Register Services
-builder.Services.AddScoped<IBackupService, BackupService>();
+builder.Services.AddKeyedScoped<IBackupService, BackupServiceV1>("v1");
+builder.Services.AddKeyedScoped<IBackupService, BackupServiceV2>("v2");
+
 builder.Services.AddSingleton<LogHelper>();
 builder.Services.AddScoped<SignalRHelper>();
 builder.Services.AddScoped<GithubCommandHelper>();
