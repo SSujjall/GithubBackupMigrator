@@ -1,6 +1,7 @@
 using GithubBackupMigrator.Server.Hubs;
 using GithubBackupMigrator.Server.Models;
 using GithubBackupMigrator.Server.Services;
+using GithubBackupMigrator.Server.Services.Helpers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +14,9 @@ builder.Services.AddSwaggerGen();
 
 #region Register Services
 builder.Services.AddScoped<IBackupService, BackupService>();
+builder.Services.AddSingleton<LogHelper>();
+builder.Services.AddScoped<SignalRHelper>();
+builder.Services.AddScoped<GithubCommandHelper>();
 #endregion
 
 #region CORS Policy
