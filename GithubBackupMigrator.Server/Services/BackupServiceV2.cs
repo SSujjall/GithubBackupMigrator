@@ -11,7 +11,6 @@ namespace GithubBackupMigrator.Server.Services
         private readonly GithubCommandHelper _gch;
 
         private readonly string workDir;
-        private readonly string logFile;
 
         public BackupServiceV2(SignalRHelper srh, LogHelper logH, GithubCommandHelper gch)
         {
@@ -23,8 +22,7 @@ namespace GithubBackupMigrator.Server.Services
             string baseDir = AppContext.BaseDirectory;
 
             // Backup folder inside project folder
-            workDir = Path.Combine(baseDir, "Backups2");
-            logFile = Path.Combine(baseDir, "Backups2", "repo-backup2-log.txt");
+            workDir = Path.Combine(baseDir, "Backups");
         }
 
 
