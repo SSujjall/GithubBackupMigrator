@@ -26,10 +26,10 @@ namespace GithubBackupMigrator.Server.Services
             _gch = gch;
 
             // Base folder of your backend project
-            string baseDir = AppContext.BaseDirectory;
+            //string baseDir = AppContext.BaseDirectory;
 
             // Backup folder inside project folder
-            workDir = Path.Combine(baseDir, "Backups");
+            workDir = @"I:\GithubTemp";
         }
 
         public async Task StartBackupService(string jobId, BackupRequest model)

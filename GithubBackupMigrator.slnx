@@ -1,7 +1,3 @@
 <Solution>
-  <Project Path="githubbackupmigrator.client/githubbackupmigrator.client.esproj">
-    <Build />
-    <Deploy />
-  </Project>
   <Project Path="GithubBackupMigrator.Server/GithubBackupMigrator.Server.csproj" />
 </Solution>
