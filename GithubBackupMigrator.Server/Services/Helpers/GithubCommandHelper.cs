@@ -64,7 +64,7 @@ namespace GithubBackupMigrator.Server.Services.Helpers
         public async Task CreateTargetGithubRepo(string repo, string token)
         {
             using var client = CreateClient(token);
-            var payload = JsonSerializer.Serialize(new { name = repo, @public = true });
+            var payload = JsonSerializer.Serialize(new { name = repo, @private = true });
             var content = new StringContent(payload, System.Text.Encoding.UTF8, "application/json");
 
             var response = await client.PostAsync("https://api.github.com/user/repos", content);
