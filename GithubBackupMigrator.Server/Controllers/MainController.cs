@@ -22,5 +22,25 @@ namespace GithubBackupMigrator.Server.Controllers
 
             return Ok(ApiResponse<object>.SuccessResponse(new { jobId = jobId }, "Backup started. Connect to SignalR hub with this jobId to track progress."));
         }
+
+        [HttpDelete("delete-all")]
+        public async Task<IActionResult> DeleteAllRepos([FromBody] DeleteRequest reqModel)
+        {
+            if (string.IsNullOrEmpty(reqModel.GithubToken))
+                return BadRequest(ApiResponse<object>.FailureResponse("A GitHub token is required to delete repositories."));
+
+            var (deleted, failed, failedRepos) = await _backupService.DeleteAllRepos(reqModel);
+
+            var data = new { deleted, failed, failedRepos };
+
+            if (failed > 0 && deleted == 0)
+                return StatusCode(500, ApiResponse<object>.FailureResponse($"Failed to delete all {failed} repositories."));
+
+            string message = failed > 0
+                ? $"Deleted {deleted} repositories. {failed} failed."
+                : $"Successfully deleted all {deleted} repositories.";
+
+            return Ok(ApiResponse<object>.SuccessResponse(data, message));
+        }
     }
 }

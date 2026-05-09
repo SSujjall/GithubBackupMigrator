@@ -6,6 +6,7 @@ namespace GithubBackupMigrator.Server.Services
     public interface IBackupService
     {
         Task StartBackupService(string jobId, BackupRequest model);
+        Task<(int deleted, int failed, string[] failedRepos)> DeleteAllRepos(DeleteRequest model);
     }
 
     public class BackupService : IBackupService
@@ -30,6 +31,36 @@ namespace GithubBackupMigrator.Server.Services
 
             // Backup folder inside project folder
             workDir = @"I:\GithubTemp";
+        }
+
+        public async Task<(int deleted, int failed, string[] failedRepos)> DeleteAllRepos(DeleteRequest model)
+        {
+            _logH.Log($"INFO: Fetching repositories for user: {model.GithubUser}");
+            var repos = await _gch.GetGithubRepos(model.GithubUser, model.GithubToken);
+            _logH.Log($"INFO: Found {repos.Length} repositories to delete");
+
+            int deleted = 0;
+            int failed = 0;
+            var failedRepos = new List<string>();
+
+            foreach (var repo in repos)
+            {
+                bool success = await _gch.DeleteGithubRepo(model.GithubUser, repo, model.GithubToken);
+                if (success)
+                {
+                    _logH.Log($"DELETED: {repo}");
+                    deleted++;
+                }
+                else
+                {
+                    _logH.Log($"FAILED TO DELETE: {repo}");
+                    failedRepos.Add(repo);
+                    failed++;
+                }
+            }
+
+            _logH.Log($"INFO: Delete complete. Deleted: {deleted}, Failed: {failed}");
+            return (deleted, failed, failedRepos.ToArray());
         }
 
         public async Task StartBackupService(string jobId, BackupRequest model)

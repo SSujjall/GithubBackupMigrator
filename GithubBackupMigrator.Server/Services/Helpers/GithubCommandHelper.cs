@@ -75,6 +75,13 @@ namespace GithubBackupMigrator.Server.Services.Helpers
             }
         }
 
+        public async Task<bool> DeleteGithubRepo(string user, string repo, string token)
+        {
+            using var client = CreateClient(token);
+            var response = await client.DeleteAsync($"https://api.github.com/repos/{user}/{repo}");
+            return response.IsSuccessStatusCode || response.StatusCode == System.Net.HttpStatusCode.NoContent;
+        }
+
         public void RunGitCommand(string command, string workingDir = "")
         {
             var processInfo = new ProcessStartInfo("git", command)
