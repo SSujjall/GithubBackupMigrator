@@ -84,6 +84,10 @@ namespace GithubBackupMigrator.Server.Services
                 _logH.Log($"INFO: Fetching repositories from target user: {model.TargetGithubUser}");
                 var targetRepos = await _gch.GetGithubRepos(model.TargetGithubUser, model.TargetGithubToken);
                 _logH.Log($"INFO: Found {targetRepos.Length} repositories in target account");
+                
+                var missingRepos = sourceRepos
+                    .Except(targetRepos, StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
 
                 int total = sourceRepos.Length;
                 int current = 0;
